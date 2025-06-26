@@ -126,27 +126,27 @@
 <body>
 
   <header>
-    <img src="logo.png" alt="Logo" /> <!-- ← cambia se hai un altro nome file/logo -->
+    <img src="logo.png" alt="Logo" />
     <h2>WebApp Ordini Post</h2>
   </header>
 
   <label for="nome">Seleziona famiglia:</label>
   <select id="nome">
-  <option value="">-- Seleziona la tua famiglia --</option>
-  <option>famiglia carapezza</option>
-  <option>famiglia caruso</option>
-  <option>famiglia di maria</option>
-  <option>famiglia marino</option>
-  <option>famiglia massimino</option>
-  <option>famiglia milanese</option>
-  <option>famiglia nicosia</option>
-  <option>famiglia pantellaro</option>
-  <option>famiglia romano</option>
-  <option>famiglia ruiz</option>
-  <option>famiglia scala</option>
-  <option>famiglia tanasi</option>
-  <option>famiglia zammillo</option>
-</select>
+    <option value="">-- Seleziona la tua famiglia --</option>
+    <option>famiglia carapezza</option>
+    <option>famiglia caruso</option>
+    <option>famiglia di maria</option>
+    <option>famiglia marino</option>
+    <option>famiglia massimino</option>
+    <option>famiglia milanese</option>
+    <option>famiglia nicosia</option>
+    <option>famiglia pantellaro</option>
+    <option>famiglia romano</option>
+    <option>famiglia ruiz</option>
+    <option>famiglia scala</option>
+    <option>famiglia tanasi</option>
+    <option>famiglia zammillo</option>
+  </select>
 
   <div id="tabella-g">
     <h3>Disponibilità prodotti</h3>
@@ -192,7 +192,11 @@
         html += `<tr>
                   <td>${p.tipo}</td>
                   <td>${p.giacenza}</td>
-                  <td><input type="number" id="quantita-${i}" min="0" max="${p.giacenza}" /></td>
+                  <td>${
+                    p.giacenza == 0
+                      ? '<span style="color:red; font-weight:bold;">SoldOut</span>'
+                      : `<input type="number" id="quantita-${i}" min="0" max="${p.giacenza}" />`
+                  }</td>
                 </tr>`;
       });
       html += "</table>";
@@ -206,10 +210,22 @@
       localStorage.setItem("famiglia", nome);
 
       const ordine = [];
-      prodotti.forEach((p, i) => {
-        const qty = parseInt(document.getElementById(`quantita-${i}`).value) || 0;
-        if (qty > 0) ordine.push({ nome, prodotto: p.tipo, quantita: qty });
-      });
+      for (let i = 0; i < prodotti.length; i++) {
+        const p = prodotti[i];
+        const input = document.getElementById(`quantita-${i}`);
+        if (!input) continue; // Salta se SoldOut
+
+        const qty = parseInt(input.value) || 0;
+
+        if (qty > p.giacenza) {
+          alert(`Attenzione: la giacenza del prodotto "${p.tipo}" è inferiore alla richiesta, modificalo.`);
+          return;
+        }
+
+        if (qty > 0) {
+          ordine.push({ nome, prodotto: p.tipo, quantita: qty });
+        }
+      }
 
       if (ordine.length === 0) return alert("Nessun prodotto selezionato.");
 
