@@ -82,7 +82,7 @@
       caricaRiepilogoFamiglia();
     };
 
-    async function prenota() {
+    function prenota() {
       const nome = document.getElementById("nome").value.trim();
       const tipo = document.getElementById("panettone").value;
       const quantita = parseInt(document.getElementById("quantita").value);
@@ -94,74 +94,55 @@
 
       localStorage.setItem("nomeUtente", nome);
 
-      try {
-        const res = await fetch(scriptUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ nome, tipo, quantita }),
-          // mode: 'cors' // è il default, non serve metterlo esplicitamente
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
-        const data = await res.json();
-
-        if (data.esito === "ok") {
-          alert("Prenotazione avvenuta con successo!");
-          caricaGiacenze();
-          caricaRiepilogoFamiglia();
-        } else {
-          alert("Errore nella prenotazione: " + JSON.stringify(data));
-        }
-      } catch (err) {
-        alert("Errore durante la richiesta: " + err.message);
-      }
+      fetch(scriptUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ nome, tipo, quantita })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("Prenotazione avvenuta con successo!");
+        caricaGiacenze();
+        caricaRiepilogoFamiglia();
+      })
+      .catch(err => alert("Errore: " + err));
     }
 
-    async function caricaGiacenze() {
-      try {
-        const res = await fetch(scriptUrl + "?action=giacenze");
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-        const data = await res.json();
-        const select = document.getElementById("panettone");
-        const tbody = document.getElementById("tabellaGiacenza").querySelector("tbody");
-        select.innerHTML = "";
-        tbody.innerHTML = "";
-        data.forEach(r => {
-          select.innerHTML += `<option value="${r.tipo}">${r.tipo}</option>`;
-          tbody.innerHTML += `<tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>`;
+    function caricaGiacenze() {
+      fetch(scriptUrl + "?action=giacenze")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("panettone");
+          const tbody = document.getElementById("tabellaGiacenza").querySelector("tbody");
+          select.innerHTML = "";
+          tbody.innerHTML = "";
+          data.forEach(r => {
+            select.innerHTML += <option value="${r.tipo}">${r.tipo}</option>;
+            tbody.innerHTML += <tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>;
+          });
         });
-      } catch (err) {
-        alert("Errore caricando giacenze: " + err.message);
-      }
     }
 
-    async function caricaRiepilogoFamiglia() {
-      try {
-        const res = await fetch(scriptUrl + "?action=riepilogo");
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    function caricaRiepilogoFamiglia() {
+      fetch(scriptUrl + "?action=riepilogo")
+        .then(res => res.json())
+        .then(data => {
+          const thead = document.getElementById("riepilogoFamiglia").querySelector("thead");
+          const tbody = document.getElementById("riepilogoFamiglia").querySelector("tbody");
+          thead.innerHTML = "";
+          tbody.innerHTML = "";
+          if (data.length === 0) return;
 
-        const data = await res.json();
-        const thead = document.getElementById("riepilogoFamiglia").querySelector("thead");
-        const tbody = document.getElementById("riepilogoFamiglia").querySelector("tbody");
-        thead.innerHTML = "";
-        tbody.innerHTML = "";
-        if (data.length === 0) return;
-
-        const intestazione = Object.keys(data[0]);
-        thead.innerHTML = `<tr>${intestazione.map(i => `<th>${i}</th>`).join("")}</tr>`;
-        data.forEach(riga => {
-          tbody.innerHTML += `<tr>${intestazione.map(k => `<td>${riga[k]}</td>`).join("")}</tr>`;
+          // intestazione dinamica
+          const intestazione = Object.keys(data[0]);
+          thead.innerHTML = <tr>${intestazione.map(i => <th>${i}</th>).join("")}</tr>;
+          data.forEach(riga => {
+            tbody.innerHTML += <tr>${intestazione.map(k => <td>${riga[k]}</td>).join("")}</tr>;
+          });
         });
-      } catch (err) {
-        alert("Errore caricando riepilogo: " + err.message);
-      }
     }
   </script>
 </body>
-</html>
+</html> 
