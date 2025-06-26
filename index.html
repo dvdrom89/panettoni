@@ -101,13 +101,19 @@
         },
         body: JSON.stringify({ nome, tipo, quantita })
       })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Errore HTTP: " + res.status);
+        return res.json();
+      })
       .then(data => {
         alert("Prenotazione avvenuta con successo!");
         caricaGiacenze();
         caricaRiepilogoFamiglia();
       })
-      .catch(err => alert("Errore: " + err));
+      .catch(err => {
+        console.error(err);
+        alert("Errore: " + err.message);
+      });
     }
 
     function caricaGiacenze() {
@@ -122,6 +128,10 @@
             select.innerHTML += `<option value="${r.tipo}">${r.tipo}</option>`;
             tbody.innerHTML += `<tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>`;
           });
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Errore nel caricamento delle giacenze.");
         });
     }
 
@@ -141,6 +151,10 @@
           data.forEach(riga => {
             tbody.innerHTML += `<tr>${intestazione.map(k => `<td>${riga[k]}</td>`).join("")}</tr>`;
           });
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Errore nel caricamento del riepilogo.");
         });
     }
   </script>
