@@ -1,148 +1,85 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <title>Prenotazione Panettoni</title>
+  <meta charset="UTF-8">
+  <title>Ordini Post - Prenotazioni</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f5f5f5;
-      padding: 20px;
-    }
-    h1, h2 {
-      color: #333;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-    }
-    input, select, button {
-      padding: 8px;
-      margin-top: 5px;
-      width: 100%;
-      max-width: 400px;
-    }
-    .hidden {
-      display: none;
-    }
-    table {
-      border-collapse: collapse;
-      margin-top: 20px;
-      width: 100%;
-      max-width: 800px;
-    }
-    table, th, td {
-      border: 1px solid #ccc;
-    }
-    th, td {
-      padding: 8px;
-      text-align: center;
-    }
+    body { font-family: sans-serif; padding: 20px; }
+    input[type="number"] { width: 50px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    button { margin-top: 20px; padding: 10px 20px; }
   </style>
 </head>
 <body>
-  <h1>Web App Prenotazione Post</h1>
 
-  <div id="form">
-    <label for="nome">Il tuo nome:</label>
-    <input type="text" id="nome" required />
+  <h2>Web App Ordini Post</h2>
 
-    <label for="panettone">Scegli il tipo di prodotto:</label>
-    <select id="panettone"></select>
+  <label for="nome">Nome:</label>
+  <input type="text" id="nome" placeholder="Inserisci il tuo nome" />
 
-    <label for="quantita">Quantità:</label>
-    <input type="number" id="quantita" min="1" />
-
-    <button onclick="prenota()">Prenota</button>
+  <div id="tabella-g">
+    <h3>Disponibilità prodotti</h3>
+    <div id="prodotti"></div>
   </div>
 
-  <h2>Disponibilità</h2>
-  <table id="tabellaGiacenza">
-    <thead>
-      <tr><th>Tipo</th><th>Disponibili</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <h2>Riepilogo per Famiglia</h2>
-  <table id="riepilogoFamiglia">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
+  <button onclick="confermaOrdine()">Prenota</button>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbywD_HoWkk-ZzomQnbVDnCaL3uUIDEw6j15u6lf5T3JW-uAvlxtR3XNtNRzlcdR6_a9/exec";
+    const scriptUrl = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // sostituisci con il tuo
+    let prodotti = [];
 
-    window.onload = () => {
-      const nomeSalvato = localStorage.getItem("nomeUtente");
-      if (nomeSalvato) {
-        document.getElementById("nome").value = nomeSalvato;
-      }
-      caricaGiacenze();
-      caricaRiepilogoFamiglia();
-    };
+    async function caricaProdotti() {
+      const res = await fetch(scriptUrl + "?action=read");
+      const data = await res.json();
+      prodotti = data;
+      mostraTabella();
+    }
 
-    function prenota() {
+    function mostraTabella() {
+      let html = "<table><tr><th>Prodotto</th><th>Disponibile</th><th>Quanti ne vuoi?</th></tr>";
+      prodotti.forEach((p, i) => {
+        html += `<tr>
+                  <td>${p.tipo}</td>
+                  <td>${p.giacenza}</td>
+                  <td><input type="number" id="quantita-${i}" min="0" max="${p.giacenza}" /></td>
+                </tr>`;
+      });
+      html += "</table>";
+      document.getElementById("prodotti").innerHTML = html;
+    }
+
+    function confermaOrdine() {
       const nome = document.getElementById("nome").value.trim();
-      const tipo = document.getElementById("panettone").value;
-      const quantita = parseInt(document.getElementById("quantita").value);
+      if (!nome) return alert("Inserisci il nome!");
 
-      if (!nome || !tipo || !quantita || quantita <= 0) {
-        alert("Compila tutti i campi correttamente.");
-        return;
-      }
+      const ordine = [];
+      prodotti.forEach((p, i) => {
+        const qty = parseInt(document.getElementById(`quantita-${i}`).value) || 0;
+        if (qty > 0) {
+          ordine.push({ nome, prodotto: p.tipo, quantita: qty });
+        }
+      });
 
-      localStorage.setItem("nomeUtente", nome);
+      if (ordine.length === 0) return alert("Nessun prodotto selezionato.");
 
-      fetch(scriptUrl, {
+      let riepilogo = `Nome: ${nome}\n\nConfermi questo ordine?\n`;
+      ordine.forEach(o => riepilogo += `- ${o.prodotto}: ${o.quantita}\n`);
+      if (confirm(riepilogo)) inviaOrdine(ordine);
+    }
+
+    async function inviaOrdine(ordine) {
+      const res = await fetch(scriptUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ nome, tipo, quantita })
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert("Prenotazione avvenuta con successo!");
-        caricaGiacenze();
-        caricaRiepilogoFamiglia();
-      })
-      .catch(err => alert("Errore: " + err));
+        body: JSON.stringify({ action: "prenota", ordine })
+      });
+      const out = await res.json();
+      alert(out.message);
+      caricaProdotti();
     }
 
-    function caricaGiacenze() {
-      fetch(scriptUrl + "?action=giacenze")
-        .then(res => res.json())
-        .then(data => {
-          const select = document.getElementById("panettone");
-          const tbody = document.getElementById("tabellaGiacenza").querySelector("tbody");
-          select.innerHTML = "";
-          tbody.innerHTML = "";
-          data.forEach(r => {
-            select.innerHTML += <option value="${r.tipo}">${r.tipo}</option>;
-            tbody.innerHTML += <tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>;
-          });
-        });
-    }
-
-    function caricaRiepilogoFamiglia() {
-      fetch(scriptUrl + "?action=riepilogo")
-        .then(res => res.json())
-        .then(data => {
-          const thead = document.getElementById("riepilogoFamiglia").querySelector("thead");
-          const tbody = document.getElementById("riepilogoFamiglia").querySelector("tbody");
-          thead.innerHTML = "";
-          tbody.innerHTML = "";
-          if (data.length === 0) return;
-
-          // intestazione dinamica
-          const intestazione = Object.keys(data[0]);
-          thead.innerHTML = <tr>${intestazione.map(i => <th>${i}</th>).join("")}</tr>;
-          data.forEach(riga => {
-            tbody.innerHTML += <tr>${intestazione.map(k => <td>${riga[k]}</td>).join("")}</tr>;
-          });
-        });
-    }
+    window.onload = caricaProdotti;
   </script>
 </body>
-</html> 
+</html>
+
