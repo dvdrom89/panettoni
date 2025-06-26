@@ -1,78 +1,3 @@
-function doPost(e) {
-  var output = ContentService.createTextOutput();
-  output.setMimeType(ContentService.MimeType.JSON);
-  output.setHeader("Access-Control-Allow-Origin", "*");
-
-  let requestData;
-  try {
-    requestData = JSON.parse(e.postData.contents);
-  } catch (err) {
-    output.setContent(JSON.stringify({ error: "JSON non valido" }));
-    return output;
-  }
-
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // Carica riepilogo
-  if (requestData.action === "riepilogo") {
-    const sheet = ss.getSheetByName("riepilogo"); // nome esatto foglio riepilogo
-    if (!sheet) {
-      output.setContent(JSON.stringify({ error: "Foglio riepilogo non trovato" }));
-      return output;
-    }
-    const dati = sheet.getDataRange().getValues();
-    output.setContent(JSON.stringify(dati));
-    return output;
-  }
-
-  // Gestione prenotazione
-  if (requestData.nome && requestData.tipo && requestData.quantita) {
-    const nome = requestData.nome;
-    const tipo = requestData.tipo;
-    const quantita = Number(requestData.quantita);
-    if (!nome || !tipo || !quantita || quantita <= 0) {
-      output.setContent(JSON.stringify({ error: "Dati non validi" }));
-      return output;
-    }
-
-    const sheetPrenotazioni = ss.getSheetByName("Riepilogo Prenotazioni");
-    const sheetGiacenza = ss.getSheetByName("GIACENZA");
-
-    if (!sheetPrenotazioni || !sheetGiacenza) {
-      output.setContent(JSON.stringify({ error: "Foglio mancante" }));
-      return output;
-    }
-
-    const now = new Date();
-    sheetPrenotazioni.appendRow([
-      nome,
-      tipo,
-      quantita,
-      Utilities.formatDate(now, "Europe/Rome", "yyyy-MM-dd"),
-      Utilities.formatDate(now, "Europe/Rome", "HH:mm:ss"),
-    ]);
-
-    const righe = sheetGiacenza.getDataRange().getValues();
-    for (let i = 1; i < righe.length; i++) {
-      if (righe[i][0].toString().toLowerCase() === tipo.toLowerCase()) {
-        const cellaOrdinati = sheetGiacenza.getRange(i + 1, 3); // colonna C
-        const attuale = Number(cellaOrdinati.getValue()) || 0;
-        cellaOrdinati.setValue(attuale + quantita);
-        break;
-      }
-    }
-
-    output.setContent(JSON.stringify({ esito: "ok" }));
-    return output;
-  }
-
-  output.setContent(JSON.stringify({ error: "Azione sconosciuta o dati incompleti" }));
-  return output;
-}
-2) HTML + JavaScript (client side)
-html
-Copia
-Modifica
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -96,6 +21,9 @@ Modifica
       margin-top: 5px;
       width: 100%;
       max-width: 400px;
+    }
+    .hidden {
+      display: none;
     }
     table {
       border-collapse: collapse;
@@ -168,93 +96,53 @@ Modifica
 
       fetch(scriptUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ nome, tipo, quantita })
       })
-      .then(res => {
-        if (!res.ok) throw new Error("Errore HTTP: " + res.status);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        if (data.esito === "ok") {
-          alert("Prenotazione avvenuta con successo!");
-          caricaGiacenze();
-          caricaRiepilogoFamiglia();
-        } else {
-          alert("Errore prenotazione: " + (data.error || "Errore sconosciuto"));
-        }
+        alert("Prenotazione avvenuta con successo!");
+        caricaGiacenze();
+        caricaRiepilogoFamiglia();
       })
-      .catch(err => {
-        console.error(err);
-        alert("Errore: " + err.message);
-      });
+      .catch(err => alert("Errore: " + err));
     }
 
     function caricaGiacenze() {
-      fetch(scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "giacenze" })
-      })
-      .then(res => {
-        if (!res.ok) throw new Error("Errore HTTP: " + res.status);
-        return res.json();
-      })
-      .then(data => {
-        const select = document.getElementById("panettone");
-        const tbody = document.getElementById("tabellaGiacenza").querySelector("tbody");
-        select.innerHTML = "";
-        tbody.innerHTML = "";
-
-        if (!Array.isArray(data)) {
-          alert("Errore dati giacenze");
-          return;
-        }
-
-        data.forEach(r => {
-          select.innerHTML += `<option value="${r.tipo}">${r.tipo}</option>`;
-          tbody.innerHTML += `<tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>`;
+      fetch(scriptUrl + "?action=giacenze")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("panettone");
+          const tbody = document.getElementById("tabellaGiacenza").querySelector("tbody");
+          select.innerHTML = "";
+          tbody.innerHTML = "";
+          data.forEach(r => {
+            select.innerHTML += <option value="${r.tipo}">${r.tipo}</option>;
+            tbody.innerHTML += <tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>;
+          });
         });
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Errore nel caricamento delle giacenze.");
-      });
     }
 
     function caricaRiepilogoFamiglia() {
-      fetch(scriptUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "riepilogo" })
-      })
-      .then(res => {
-        if (!res.ok) throw new Error("Errore HTTP: " + res.status);
-        return res.json();
-      })
-      .then(data => {
-        const thead = document.getElementById("riepilogoFamiglia").querySelector("thead");
-        const tbody = document.getElementById("riepilogoFamiglia").querySelector("tbody");
-        thead.innerHTML = "";
-        tbody.innerHTML = "";
+      fetch(scriptUrl + "?action=riepilogo")
+        .then(res => res.json())
+        .then(data => {
+          const thead = document.getElementById("riepilogoFamiglia").querySelector("thead");
+          const tbody = document.getElementById("riepilogoFamiglia").querySelector("tbody");
+          thead.innerHTML = "";
+          tbody.innerHTML = "";
+          if (data.length === 0) return;
 
-        if (!Array.isArray(data) || data.length === 0) return;
-
-        // Assumiamo che il foglio "riepilogo" abbia intestazioni in prima riga (data[0])
-        const intestazione = data[0];
-        thead.innerHTML = `<tr>${intestazione.map(i => `<th>${i}</th>`).join("")}</tr>`;
-
-        // Da riga 2 in poi i dati
-        for (let i = 1; i < data.length; i++) {
-          const riga = data[i];
-          tbody.innerHTML += `<tr>${riga.map(c => `<td>${c}</td>`).join("")}</tr>`;
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Errore nel caricamento del riepilogo.");
-      });
+          // intestazione dinamica
+          const intestazione = Object.keys(data[0]);
+          thead.innerHTML = <tr>${intestazione.map(i => <th>${i}</th>).join("")}</tr>;
+          data.forEach(riga => {
+            tbody.innerHTML += <tr>${intestazione.map(k => <td>${riga[k]}</td>).join("")}</tr>;
+          });
+        });
     }
   </script>
 </body>
-</html>
+</html> 
