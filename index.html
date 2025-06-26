@@ -41,13 +41,13 @@
   </style>
 </head>
 <body>
-  <h1>Web App Prenotazioni Post</h1>
+  <h1>Web App Prenotazione Panettoni</h1>
 
   <div id="form">
     <label for="nome">Il tuo nome:</label>
     <input type="text" id="nome" required />
 
-    <label for="panettone">Scegli il prodotto:</label>
+    <label for="panettone">Scegli il tipo di panettone:</label>
     <select id="panettone"></select>
 
     <label for="quantita">Quantità:</label>
@@ -56,7 +56,7 @@
     <button onclick="prenota()">Prenota</button>
   </div>
 
-  <h2>Disponibilità</h2>
+  <h2>Disponibilità Panettoni</h2>
   <table id="tabellaGiacenza">
     <thead>
       <tr><th>Tipo</th><th>Disponibili</th></tr>
@@ -71,7 +71,7 @@
   </table>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbywD_HoWkk-ZzomQnbVDnCaL3uUIDEw6j15u6lf5T3JW-uAvlxtR3XNtNRzlcdR6_a9/exec";
+    const scriptUrl = "INSERISCI_LA_TUA_URL_DELLO_SCRIPT";
 
     window.onload = () => {
       const nomeSalvato = localStorage.getItem("nomeUtente");
@@ -119,8 +119,8 @@
           select.innerHTML = "";
           tbody.innerHTML = "";
           data.forEach(r => {
-            select.innerHTML += <option value="${r.tipo}">${r.tipo}</option>;
-            tbody.innerHTML += <tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>;
+            select.innerHTML += `<option value="${r.tipo}">${r.tipo}</option>`;
+            tbody.innerHTML += `<tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>`;
           });
         });
     }
@@ -137,12 +137,12 @@
 
           // intestazione dinamica
           const intestazione = Object.keys(data[0]);
-          thead.innerHTML = <tr>${intestazione.map(i => <th>${i}</th>).join("")}</tr>;
+          thead.innerHTML = `<tr>${intestazione.map(i => `<th>${i}</th>`).join("")}</tr>`;
           data.forEach(riga => {
-            tbody.innerHTML += <tr>${intestazione.map(k => <td>${riga[k]}</td>).join("")}</tr>;
+            tbody.innerHTML += `<tr>${intestazione.map(k => `<td>${riga[k]}</td>`).join("")}</tr>`;
           });
         });
     }
   </script>
 </body>
-</html> 
+</html>
