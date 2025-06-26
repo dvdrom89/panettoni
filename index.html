@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prenotazione Panettoni</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, select, button {
+      padding: 8px;
+      margin-top: 5px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .hidden {
+      display: none;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Web App Prenotazione Panettoni</h1>
+
+  <div id="form">
+    <label for="nome">Il tuo nome:</label>
+    <input type="text" id="nome" required />
+
+    <label for="panettone">Scegli il tipo di panettone:</label>
+    <select id="panettone"></select>
+
+    <label for="quantita">Quantità:</label>
+    <input type="number" id="quantita" min="1" />
+
+    <button onclick="prenota()">Prenota</button>
+  </div>
+
+  <h2>Disponibilità Panettoni</h2>
+  <table id="tabellaGiacenza">
+    <thead>
+      <tr><th>Tipo</th><th>Disponibili</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Riepilogo per Famiglia</h2>
+  <table id="riepilogoFamiglia">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const scriptUrl = "INSERISCI_LA_TUA_URL_DELLO_SCRIPT";
+
+    window.onload = () => {
+      const nomeSalvato = localStorage.getItem("nomeUtente");
+      if (nomeSalvato) {
+        document.getElementById("nome").value = nomeSalvato;
+      }
+      caricaGiacenze();
+      caricaRiepilogoFamiglia();
+    };
+
+    function prenota() {
+      const nome = document.getElementById("nome").value.trim();
+      const tipo = document.getElementById("panettone").value;
+      const quantita = parseInt(document.getElementById("quantita").value);
+
+      if (!nome || !tipo || !quantita || quantita <= 0) {
+        alert("Compila tutti i campi correttamente.");
+        return;
+      }
+
+      localStorage.setItem("nomeUtente", nome);
+
+      fetch(scriptUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ nome, tipo, quantita })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("Prenotazione avvenuta con successo!");
+        caricaGiacenze();
+        caricaRiepilogoFamiglia();
+      })
+      .catch(err => alert("Errore: " + err));
+    }
+
+    function caricaGiacenze() {
+      fetch(scriptUrl + "?action=giacenze")
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("panettone");
+          const tbody = document.getElementById("tabellaGiacenza").querySelector("tbody");
+          select.innerHTML = "";
+          tbody.innerHTML = "";
+          data.forEach(r => {
+            select.innerHTML += `<option value="${r.tipo}">${r.tipo}</option>`;
+            tbody.innerHTML += `<tr><td>${r.tipo}</td><td>${r.rimanenti}</td></tr>`;
+          });
+        });
+    }
+
+    function caricaRiepilogoFamiglia() {
+      fetch(scriptUrl + "?action=riepilogo")
+        .then(res => res.json())
+        .then(data => {
+          const thead = document.getElementById("riepilogoFamiglia").querySelector("thead");
+          const tbody = document.getElementById("riepilogoFamiglia").querySelector("tbody");
+          thead.innerHTML = "";
+          tbody.innerHTML = "";
+          if (data.length === 0) return;
+
+          // intestazione dinamica
+          const intestazione = Object.keys(data[0]);
+          thead.innerHTML = `<tr>${intestazione.map(i => `<th>${i}</th>`).join("")}</tr>`;
+          data.forEach(riga => {
+            tbody.innerHTML += `<tr>${intestazione.map(k => `<td>${riga[k]}</td>`).join("")}</tr>`;
+          });
+        });
+    }
+  </script>
+</body>
+</html>
