@@ -131,7 +131,7 @@
   </header>
 
   <label for="nome">Seleziona famiglia:</label>
-  <select id="nome">
+   <select id="nome">
     <option value="">-- Seleziona la tua famiglia --</option>
     <option>famiglia carapezza</option>
     <option>famiglia caruso</option>
@@ -162,6 +162,9 @@
     <div id="modal-content">
       <h3>Conferma ordine</h3>
       <pre id="riepilogoModal"></pre>
+      <div id="messaggioAttesa" style="margin-top:1rem; display:none; color:#2e7d32; font-weight:bold;">
+        ⏳ Attendi, il tuo ordine sta per essere processato...
+      </div>
       <button onclick="inviaOrdine()">Conferma</button>
       <button onclick="chiudiModal()">Annulla</button>
     </div>
@@ -239,9 +242,12 @@
 
     function chiudiModal() {
       document.getElementById("modal").style.display = "none";
+      document.getElementById("messaggioAttesa").style.display = "none";
     }
 
     async function inviaOrdine() {
+      document.getElementById("messaggioAttesa").style.display = "block";
+
       try {
         const res = await fetch(scriptUrl, {
           method: "POST",
@@ -251,9 +257,11 @@
         alert(out.message);
         document.getElementById("riepilogo").innerText = "";
         document.getElementById("modal").style.display = "none";
+        document.getElementById("messaggioAttesa").style.display = "none";
         caricaProdotti();
       } catch (e) {
         alert("Errore durante l'invio dell'ordine: " + e.message);
+        document.getElementById("messaggioAttesa").style.display = "none";
       }
     }
 
